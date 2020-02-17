@@ -8,12 +8,17 @@ pub enum Token {
     Identifier(String),
     Int(String),
     //Operators
+    Assign,
     Equal,
     NotEqual,
     LessThan,
+    LessThanAndEqual,
     MoreThan,
+    MoreThanAndEqual,
     Plus,
+    Increment,
     Minus,
+    Decrement,
     Asterisk,
     Slash,
     Exclamation,
@@ -35,11 +40,13 @@ pub enum Token {
     If,
     Else,
     Return,
+    And,
+    Or,
 }
 
 impl Default for Token {
     fn default() -> Token {
-        Token::Ilegal
+        Token::Illegal
     }
 }
 
@@ -51,6 +58,9 @@ pub fn lookup_ident(ident: &str) -> Token {
         "false" => Token::False,
         "if" => Token::If,
         "else" => Token::Else,
+        "and" => Token::And,
+        "or" => Token::Or,
         "return" => Token::Return,
+        _ => Token::Identifier(ident.to_string()),
     }
 }
