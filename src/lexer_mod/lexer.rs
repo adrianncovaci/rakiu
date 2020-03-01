@@ -57,7 +57,7 @@ impl<'a> Lexer<'a> {
         ident
     }
 
-    fn read_number(&mut self, first: char) -> String {
+    fn read_number(&mut self, first: char) -> i64 {
         let mut number = String::new();
         number.push(first);
 
@@ -67,7 +67,8 @@ impl<'a> Lexer<'a> {
             }
             number.push(self.read_char().unwrap());
         }
-        number
+        let ret_number: i64 = number.parse().unwrap();
+        ret_number
     }
 
     pub fn next_token(&mut self) -> Token {
@@ -149,7 +150,7 @@ impl<'a> Lexer<'a> {
             Some(ch @ _) => {
                 if is_letter(ch) {
                     let literal = self.read_identifier(ch);
-                    token::lookup_ident(&literal)
+                    token::get_identifier(&literal)
                 } else if ch.is_numeric() {
                     Token::Int(self.read_number(ch))
                 } else {

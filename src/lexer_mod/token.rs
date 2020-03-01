@@ -6,7 +6,7 @@ pub enum Token {
 
     //Identifiers
     Identifier(String),
-    Int(String),
+    Int(i64),
     //Operators
     Assign,
     Equal,
@@ -50,8 +50,8 @@ impl Default for Token {
     }
 }
 
-pub fn lookup_ident(ident: &str) -> Token {
-    match ident {
+pub fn get_identifier(idnt: &str) -> Token {
+    match idnt {
         "fn" => Token::Fn,
         "let" => Token::Let,
         "true" => Token::True,
@@ -61,6 +61,6 @@ pub fn lookup_ident(ident: &str) -> Token {
         "and" => Token::And,
         "or" => Token::Or,
         "return" => Token::Return,
-        _ => Token::Identifier(ident.to_string()),
+        _ => Token::Identifier(idnt.to_string()),
     }
 }
