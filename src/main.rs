@@ -8,7 +8,7 @@ use parser_mod::Parser::Parser;
 use parser_mod::ParseItem::Program;
 
 fn main() {
-    let file = File::open("prog_r.txt").unwrap();
+    let file = File::open("progr.txt").unwrap();
 
     let reader = BufReader::new(file);
 
@@ -16,11 +16,6 @@ fn main() {
         let mut line = val.unwrap();
         let mut lexer = Lexer::new(&mut line);
         let mut parser = Parser::new(lexer);
-        loop {
-            parser.parse_program();
-            if parser.next_token == Box::new(Token::Eof) {
-            break;
-            }
-        }
+        parser.next_token();
     }
 }

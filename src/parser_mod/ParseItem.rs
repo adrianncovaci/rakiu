@@ -15,6 +15,8 @@ impl Program {
 
 pub enum Statement {
     Let(Identifier, Expression),
+    Return(Expression),
+    Return(Expression),
     None,
 }
 
@@ -24,5 +26,5 @@ pub enum Expression {
     Integer(i64),
     String(String),
     Array(Vec<Expression>),
-    Function(Vec<Identifier>, Box<Statement>),
+    Function(Vec<Identifier>, Vec<Statement>),
 }
