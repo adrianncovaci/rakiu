@@ -17,8 +17,17 @@ fn main() {
         let mut lexer = Lexer::new(&mut line);
         let mut parser = Parser::new(lexer);
         let program = parser.parse();
-        for x in &program {
-            println!("{:?}", program);
+        let errs = parser.get_errors();
+        for ls in &program {
+                println!("{}", ls);
+        }
+
+        if errs.len() == 0 {
+            println!("Parsing successful!");
+        } else {
+            for el in &errs {
+                println!("{}", el);
+            }
         }
     }
 }

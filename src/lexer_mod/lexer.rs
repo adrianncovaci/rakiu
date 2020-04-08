@@ -147,6 +147,12 @@ impl<'a> Lexer<'a> {
             Some('}') => {
                 Token::RightBrace
             }
+            Some('[') => {
+                Token::LeftBracket
+            }
+            Some(']') => {
+                Token::RightBracket
+            }
             Some(ch @ _) => {
                 if is_letter(ch) {
                     let literal = self.read_identifier(ch);
