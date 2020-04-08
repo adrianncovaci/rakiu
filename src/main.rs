@@ -16,6 +16,9 @@ fn main() {
         let mut line = val.unwrap();
         let mut lexer = Lexer::new(&mut line);
         let mut parser = Parser::new(lexer);
-        parser.next_token();
+        let program = parser.parse();
+        for x in &program {
+            println!("{:?}", program);
+        }
     }
 }
