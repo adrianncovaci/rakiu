@@ -128,7 +128,7 @@ impl fmt::Display for Infix {
 pub enum Prefix {
     Plus,
     Minus,
-    Not
+    Not,
 }
 
 impl fmt::Display for Prefix {

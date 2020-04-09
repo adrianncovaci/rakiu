@@ -1,3 +1,0 @@
-fn main() { let result = 5+10; result = 8 - 2 * 3 + 123 / 2; return result; }
-main()
-fn main(a, b) { a = a + b; }
