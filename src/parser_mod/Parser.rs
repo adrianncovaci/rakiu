@@ -159,7 +159,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn parse_statement(&mut self) -> Option<ParseItem::Statement> {
+    fn parse_statement(&mut self) -> Option<ParseItem::Statement> {
         match(*self.current_token) {
             Token::Return => self.parse_return_statement(),
             Token::Let => {
@@ -190,6 +190,7 @@ impl<'a> Parser<'a> {
             Token::Fn => self.parse_function_expression(),
             Token::Exclamation | Token::Minus | Token::Plus => self.parse_prefix_expression(),
             Token::Semicolon => { self.next_token(); return None; },
+            Token::If => { self.parse_if_expression() },
             _ => {
                 self.error_no_prefix();
                 return None;
@@ -224,7 +225,7 @@ impl<'a> Parser<'a> {
             }
         }
 
-        if *self.next_token == Token::Eof && *self.current_token != Token::Eof && *self.current_token != Token::Semicolon {
+        if *self.next_token == Token::Eof && *self.current_token != Token::Eof && *self.current_token != Token::Semicolon && *self.current_token != Token::RightBrace {
             self.error_next(&Token::Semicolon);
             self.next_token();
             return None;
@@ -302,7 +303,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_integer_literal(&mut self, tok: Token) -> Option<ParseItem::Expression> {
+    fn parse_integer_literal(&mut self) -> Option<ParseItem::Expression> {
         match *self.current_token {
             Token::Int(ref mut int) => Some(ParseItem::Expression::Integer(int.clone())),
             _ => return None,
@@ -357,6 +358,7 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_array_expression(&mut self) -> Option<ParseItem::Expression> {
+        
         match self.parse_expression_list(Token::RightBracket) {
             Some(vec) => {
                 Some(ParseItem::Expression::Array(vec))
@@ -441,7 +443,7 @@ impl<'a> Parser<'a> {
             match self.parse_statement() {
                 Some(statement) => {
 
-                    if (*self.next_token != Token::Semicolon) {
+                    if *self.next_token != Token::Semicolon {
                         self.error_next(&Token::Semicolon);
                         *self.current_token = Token::Eof;
                         *self.next_token = Token::Eof;
@@ -510,6 +512,39 @@ impl<'a> Parser<'a> {
         Some(ParseItem::Statement::Return(expression))
     }
 
+    fn parse_if_expression(&mut self) -> Option<ParseItem::Expression> {
+        if !self.expect_next_token(Token::LeftParanthesis) {
+            return None;
+        }
+
+        self.next_token();
+
+        let predicate = match self.parse_expression(Order::Lowest) {
+            Some(expr) => expr,
+            None => return None,
+        };
+
+        if !self.expect_next_token(Token::RightParanthesis) || !self.expect_next_token(Token::LeftBrace) {
+            return None;
+        }
+
+        let body = self.parse_block_statements();
+        let mut else_body = None;
+
+        if self.next_token_is(&Token::Else) {
+            self.next_token();
+
+            if !self.expect_next_token(Token::LeftBrace) {
+                return None;
+            }
+
+            else_body = Some(self.parse_block_statements());
+        }
+
+        Some(ParseItem::Expression::If(Box::new(predicate), body, else_body))
+        
+    }
+
     pub fn parse_call_expression(&mut self, expr: ParseItem::Expression) -> Option<ParseItem::Expression> {
         let args = match self.parse_expression_list(Token::RightParanthesis) {
             Some(args) => args,
@@ -521,5 +556,6 @@ impl<'a> Parser<'a> {
             args,
         })
     }
+
 
 }

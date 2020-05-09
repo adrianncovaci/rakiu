@@ -53,6 +53,7 @@ pub enum Expression {
     Infix(Infix, Box<Expression>, Box<Expression>),
     Prefix(Prefix, Box<Expression>),
     Index(Box<Expression>, Box<Expression>),
+    If(Box<Expression>, Vec<Statement>, Option<Vec<Statement>> )
 }
 
 impl fmt::Display for Expression {
@@ -134,8 +135,8 @@ pub enum Prefix {
 impl fmt::Display for Prefix {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            Prefix::Plus => write!(f, "+"),
-            Prefix::Minus => write!(f, "-"),
+            Prefix::Plus => write!(f, "++"),
+            Prefix::Minus => write!(f, "--"),
             Prefix::Not => write!(f, "!"),
         }
     }

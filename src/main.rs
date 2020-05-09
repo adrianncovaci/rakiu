@@ -1,5 +1,6 @@
 mod lexer_mod;
 mod parser_mod;
+mod evaluation_mod;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use lexer_mod::token::Token;
