@@ -7,6 +7,7 @@ use lexer_mod::token::Token;
 use lexer_mod::lexer::Lexer;
 use parser_mod::Parser::Parser;
 use parser_mod::ParseItem::Program;
+use evaluation_mod::evaluate;
 
 fn main() {
     let file = File::open("progr.txt").unwrap();

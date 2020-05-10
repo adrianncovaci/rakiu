@@ -184,7 +184,7 @@ impl<'a> Parser<'a> {
     fn parse_expression(&mut self, order: Order) -> Option<ParseItem::Expression> {
         let mut left = match *self.current_token {
             Token::Identifier(_) => self.parse_identifier_expression(),
-            Token::And | Token::False => self.parse_bool_expression(),
+            Token::True | Token::False => self.parse_bool_expression(),
             Token::Int(_) => self.parse_int_expression(),
             Token::LeftBracket => self.parse_array_expression(),
             Token::Fn => self.parse_function_expression(),
