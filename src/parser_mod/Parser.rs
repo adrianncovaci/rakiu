@@ -2,9 +2,10 @@ use super::ParseItem;
 use crate::lexer_mod::lexer;
 use crate::lexer_mod::lexer::Lexer;
 use crate::lexer_mod::token::Token;
+use ndarray::Array2;
 
-use std::mem;
 use std::fmt;
+use std::mem;
 
 pub type ParseErrors = Vec<ParseError>;
 pub type Program = Vec<ParseItem::Statement>;
@@ -21,8 +22,6 @@ pub enum Order {
     Index,
     Assign,
 }
-
-
 
 #[derive(Debug, Clone)]
 pub enum Error {
@@ -55,7 +54,6 @@ impl fmt::Display for ParseError {
     }
 }
 
-
 pub struct Parser<'a> {
     pub current_token: Box<Token>,
     pub next_token: Box<Token>,
@@ -84,19 +82,14 @@ impl<'a> Parser<'a> {
     fn error_next(&mut self, tok: &Token) {
         self.err_list.push(ParseError::new(
             Error::UnexpectedToken,
-            format!(
-                "expected {}, but found {} instead",
-                *tok, *self.next_token
-            ),
+            format!("expected {}, but found {} instead", *tok, *self.next_token),
         ));
     }
 
     fn error_no_prefix(&mut self) {
-        self.err_list.push(ParseError::new(     Error::UnexpectedToken,
-            format!(
-                "no prefix for {:?} found",
-                *self.current_token,
-            )
+        self.err_list.push(ParseError::new(
+            Error::UnexpectedToken,
+            format!("no prefix for {:?} found", *self.current_token,),
         ));
     }
 
@@ -118,17 +111,20 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn token_order (token: &Token) -> Order {
+    fn token_order(token: &Token) -> Order {
         match token {
             Token::Equal | Token::NotEqual => Order::Equals,
-            Token::LessThan | Token::LessThanAndEqual | Token::MoreThan | Token::MoreThanAndEqual => Order::LessGreater,
+            Token::LessThan
+            | Token::LessThanAndEqual
+            | Token::MoreThan
+            | Token::MoreThanAndEqual => Order::LessGreater,
             Token::Plus | Token::Minus => Order::Sum,
             Token::Asterisk | Token::Slash => Order::Product,
             Token::LeftBracket => Order::Index,
             Token::LeftParanthesis => Order::Call,
             Token::Assign => Order::Assign,
             _ => Order::Lowest,
-       }
+        }
     }
 
     fn peek_order(&self) -> Order {
@@ -155,28 +151,22 @@ impl<'a> Parser<'a> {
     fn parse_identifier(&mut self) -> Option<String> {
         match *self.current_token {
             Token::Identifier(ref mut ident) => Some(ident.to_string()),
-            _ => None
+            _ => None,
         }
     }
 
     fn parse_statement(&mut self) -> Option<ParseItem::Statement> {
-        match(*self.current_token) {
+        match (*self.current_token) {
             Token::Return => self.parse_return_statement(),
-            Token::Let => {
-                self.parse_let_statement()
-            }
+            Token::Let => self.parse_let_statement(),
             Token::Illegal => Some(ParseItem::Statement::None),
-            _ => {
-                self.parse_expression_statement()
-            }
+            _ => self.parse_expression_statement(),
         }
     }
 
     fn parse_expression_statement(&mut self) -> Option<ParseItem::Statement> {
         match self.parse_expression(Order::Lowest) {
-            Some(expr) => {
-                Some(ParseItem::Statement::Expression(expr))
-            }
+            Some(expr) => Some(ParseItem::Statement::Expression(expr)),
             None => None,
         }
     }
@@ -189,26 +179,36 @@ impl<'a> Parser<'a> {
             Token::LeftBracket => self.parse_array_expression(),
             Token::Fn => self.parse_function_expression(),
             Token::Exclamation | Token::Minus | Token::Plus => self.parse_prefix_expression(),
-            Token::Semicolon => { self.next_token(); return None; },
-            Token::If => { self.parse_if_expression() },
+            Token::Semicolon => {
+                self.next_token();
+                return None;
+            }
+            Token::If => self.parse_if_expression(),
             _ => {
                 self.error_no_prefix();
                 return None;
             }
-         };
+        };
 
         while !self.next_token_is(&Token::Semicolon) && order < self.peek_order() {
             match *self.next_token {
-                Token::Plus | Token::Minus
-                    | Token::Slash | Token::Asterisk
-                    | Token::Equal | Token::NotEqual
-                    | Token::LessThan | Token::LessThanAndEqual
-                    | Token::MoreThan | Token::MoreThanAndEqual
-                    | Token::Assign => {
-                        self.next_token();
-                        left = self.parse_infix_expression(left.unwrap());
-
-                    }
+                Token::Plus
+                | Token::Minus
+                | Token::Slash
+                | Token::Asterisk
+                | Token::Equal
+                | Token::NotEqual
+                | Token::LessThan
+                | Token::LessThanAndEqual
+                | Token::MoreThan
+                | Token::MoreThanAndEqual
+                | Token::Assign => {
+                    self.next_token();
+                    left = self.parse_infix_expression(left.unwrap());
+                    // if *self.next_token == Token::Semicolon {
+                    //     self.next_token();
+                    // }
+                }
                 Token::Identifier(_) => {
                     self.next_token();
                     self.error_no_prefix();
@@ -225,7 +225,11 @@ impl<'a> Parser<'a> {
             }
         }
 
-        if *self.next_token == Token::Eof && *self.current_token != Token::Eof && *self.current_token != Token::Semicolon && *self.current_token != Token::RightBrace {
+        if *self.next_token == Token::Eof
+            && *self.current_token != Token::Eof
+            && *self.current_token != Token::Semicolon
+            && *self.current_token != Token::RightBrace
+        {
             self.error_next(&Token::Semicolon);
             self.next_token();
             return None;
@@ -234,13 +238,15 @@ impl<'a> Parser<'a> {
         left
     }
 
-
     fn parse_prefix_expression(&mut self) -> Option<ParseItem::Expression> {
         let prefix = match *self.current_token {
             Token::Exclamation => ParseItem::Prefix::Not,
             Token::Plus => ParseItem::Prefix::Plus,
             Token::Minus => ParseItem::Prefix::Minus,
-            _ => { self.error_no_prefix(); return None; }
+            _ => {
+                self.error_no_prefix();
+                return None;
+            }
         };
 
         self.next_token();
@@ -251,7 +257,10 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_infix_expression(&mut self, left: ParseItem::Expression) -> Option<ParseItem::Expression> {
+    fn parse_infix_expression(
+        &mut self,
+        left: ParseItem::Expression,
+    ) -> Option<ParseItem::Expression> {
         let infix = match *self.current_token {
             Token::Plus => ParseItem::Infix::Plus,
             Token::Minus => ParseItem::Infix::Minus,
@@ -270,19 +279,23 @@ impl<'a> Parser<'a> {
         let order = self.current_order();
 
         self.next_token();
-
         match self.parse_expression(order) {
             Some(expression) => {
                 //self.next_token();
-                Some(ParseItem::Expression::Infix(infix, Box::new(left), Box::new(expression)))
+                Some(ParseItem::Expression::Infix(
+                    infix,
+                    Box::new(left),
+                    Box::new(expression),
+                ))
             }
-            None => {
-                None
-            }
+            None => None,
         }
     }
 
-    fn parse_index_expression(&mut self, left: ParseItem::Expression) -> Option<ParseItem::Expression> {
+    fn parse_index_expression(
+        &mut self,
+        left: ParseItem::Expression,
+    ) -> Option<ParseItem::Expression> {
         self.next_token();
         let index = match self.parse_expression(Order::Lowest) {
             Some(expr) => expr,
@@ -293,7 +306,10 @@ impl<'a> Parser<'a> {
             return None;
         }
 
-        Some(ParseItem::Expression::Index(Box::new(left), Box::new(index)))
+        Some(ParseItem::Expression::Index(
+            Box::new(left),
+            Box::new(index),
+        ))
     }
 
     fn parse_identifier_expression(&mut self) -> Option<ParseItem::Expression> {
@@ -314,7 +330,7 @@ impl<'a> Parser<'a> {
         match *self.current_token {
             Token::True => Some(ParseItem::Expression::Bool(true)),
             Token::False => Some(ParseItem::Expression::Bool(false)),
-            _ =>  None,
+            _ => None,
         }
     }
 
@@ -325,8 +341,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_expression_list(&mut self, end:Token) -> Option<Vec<ParseItem::Expression>> {
-
+    fn parse_expression_list(&mut self, end: Token) -> Option<Vec<ParseItem::Expression>> {
         let mut vec = vec![];
 
         if self.next_token_is(&end) {
@@ -340,57 +355,61 @@ impl<'a> Parser<'a> {
             Some(expr) => vec.push(expr),
             _ => return None,
         }
-
         while self.next_token_is(&Token::Comma) {
             self.next_token();
             self.next_token();
-
             match self.parse_expression(Order::Lowest) {
                 Some(expr) => vec.push(expr),
                 _ => return None,
             }
         }
-
-        if !self.expect_next_token(end) {
+        if *self.next_token != end {
             return None;
         }
         Some(vec)
     }
 
     fn parse_array_expression(&mut self) -> Option<ParseItem::Expression> {
-        
-        match self.parse_expression_list(Token::RightBracket) {
-            Some(vec) => {
-                Some(ParseItem::Expression::Array(vec))
-            }
-            _ => None,
+        if !self.next_token_is(&Token::LeftBrace) {
+            self.error_next(&Token::LeftBrace);
         }
+        let mut arr: Vec<Vec<ParseItem::Expression>> = vec![];
+        while *self.next_token != Token::RightBracket {
+            self.next_token();
+            let vec = self.parse_expression_list(Token::RightBrace);
+            arr.push(vec.unwrap());
+            self.next_token();
+            if *self.current_token != Token::Comma
+                && *self.current_token != Token::RightBrace
+                && *self.current_token != Token::RightBracket
+            {
+                // self.error_no_prefix();
+                return None;
+            }
+            println!("{:?} {:?}", self.current_token, self.next_token);
+        }
+        self.next_token();
+        Some(ParseItem::Expression::Array(arr))
     }
 
     fn parse_function_parameters(&mut self) -> Option<Vec<String>> {
         let mut params = vec![];
-
-        if self.expect_next_token(Token::RightParanthesis) {
+        if *self.next_token == Token::RightParanthesis {
             return Some(params);
         }
-
         self.next_token();
-
         match self.parse_identifier() {
             Some(ident) => params.push(ident),
             _ => return None,
         };
-
         while self.next_token_is(&Token::Comma) {
             self.next_token();
             self.next_token();
-
             match self.parse_identifier() {
                 Some(ident) => params.push(ident),
                 _ => return None,
             };
         }
-
         if !self.expect_next_token(Token::RightParanthesis) {
             self.error_next(&Token::RightParanthesis);
             return None;
@@ -413,9 +432,7 @@ impl<'a> Parser<'a> {
         self.next_token();
 
         let params = match self.parse_function_parameters() {
-            Some(params) => {
-                params
-            }
+            Some(params) => params,
             _ => return None,
         };
 
@@ -424,25 +441,20 @@ impl<'a> Parser<'a> {
             return None;
         }
 
-
         let body = self.parse_block_statements();
 
-        self.next_token();
-
+        //self.next_token();
         Some(ParseItem::Expression::Function(ident, params, body))
     }
 
     fn parse_block_statements(&mut self) -> Vec<ParseItem::Statement> {
-
         let mut statements: Vec<ParseItem::Statement> = vec![];
 
         self.next_token();
 
-
         while *self.current_token != Token::RightBrace && *self.current_token != Token::Eof {
             match self.parse_statement() {
                 Some(statement) => {
-
                     if *self.next_token != Token::Semicolon {
                         self.error_next(&Token::Semicolon);
                         *self.current_token = Token::Eof;
@@ -450,7 +462,6 @@ impl<'a> Parser<'a> {
                         self.next_token();
                         ()
                     }
-
 
                     statements.push(statement);
                     self.next_token();
@@ -464,7 +475,6 @@ impl<'a> Parser<'a> {
     }
 
     pub fn parse_let_statement(&mut self) -> Option<ParseItem::Statement> {
-
         match *self.next_token {
             Token::Identifier(_) => self.next_token(),
             _ => return None,
@@ -479,7 +489,10 @@ impl<'a> Parser<'a> {
         };
 
         if *self.next_token == Token::Semicolon {
-            return Some(ParseItem::Statement::Let(ident, ParseItem::Expression::Integer(0)));
+            return Some(ParseItem::Statement::Let(
+                ident,
+                ParseItem::Expression::Integer(0),
+            ));
         }
 
         if !self.expect_next_token(Token::Assign) {
@@ -487,11 +500,10 @@ impl<'a> Parser<'a> {
             return None;
         }
 
-
         self.next_token();
         let eval = match self.parse_expression(Order::Lowest) {
             Some(expr) => expr,
-            _ =>  return None,
+            _ => return None,
         };
 
         Some(ParseItem::Statement::Let(ident, eval))
@@ -524,7 +536,9 @@ impl<'a> Parser<'a> {
             None => return None,
         };
 
-        if !self.expect_next_token(Token::RightParanthesis) || !self.expect_next_token(Token::LeftBrace) {
+        if !self.expect_next_token(Token::RightParanthesis)
+            || !self.expect_next_token(Token::LeftBrace)
+        {
             return None;
         }
 
@@ -541,11 +555,17 @@ impl<'a> Parser<'a> {
             else_body = Some(self.parse_block_statements());
         }
 
-        Some(ParseItem::Expression::If(Box::new(predicate), body, else_body))
-        
+        Some(ParseItem::Expression::If(
+            Box::new(predicate),
+            body,
+            else_body,
+        ))
     }
 
-    pub fn parse_call_expression(&mut self, expr: ParseItem::Expression) -> Option<ParseItem::Expression> {
+    pub fn parse_call_expression(
+        &mut self,
+        expr: ParseItem::Expression,
+    ) -> Option<ParseItem::Expression> {
         let args = match self.parse_expression_list(Token::RightParanthesis) {
             Some(args) => args,
             None => return None,
@@ -556,6 +576,4 @@ impl<'a> Parser<'a> {
             args,
         })
     }
-
-
 }

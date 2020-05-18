@@ -1,5 +1,6 @@
-use std::fmt;
 use crate::lexer_mod::token::Token;
+use ndarray;
+use std::fmt;
 pub type Identifier = String;
 
 pub struct Program {
@@ -31,10 +32,8 @@ impl fmt::Display for Statement {
             // Statement::Return(expr) => {
             //     write!(f, "{}", expr)
             // },
-            Statement::Expression(expr) => {
-                write!(f, "{}", expr)
-            },
-            _ => writeln!(f, "{:?}", self)
+            Statement::Expression(expr) => write!(f, "{}", expr),
+            _ => writeln!(f, "{:?}", self),
         }
     }
 }
@@ -48,12 +47,12 @@ pub enum Expression {
         func: Box<Expression>,
         args: Vec<Expression>,
     },
-    Array(Vec<Expression>),
+    Array(Vec<Vec<Expression>>),
     Function(Identifier, Vec<Identifier>, Vec<Statement>),
     Infix(Infix, Box<Expression>, Box<Expression>),
     Prefix(Prefix, Box<Expression>),
     Index(Box<Expression>, Box<Expression>),
-    If(Box<Expression>, Vec<Statement>, Option<Vec<Statement>> )
+    If(Box<Expression>, Vec<Statement>, Option<Vec<Statement>>),
 }
 
 impl fmt::Display for Expression {
@@ -62,7 +61,7 @@ impl fmt::Display for Expression {
             Expression::Function(ident, pars, stmts) => {
                 write!(f, "\nFunction: {}\n", ident)?;
                 write!(f, "\tParameters:\n\t\t")?;
-                for st in pars{
+                for st in pars {
                     write!(f, "{} ", st)?;
                 }
                 write!(f, "\n\tStatements: ")?;
@@ -70,24 +69,22 @@ impl fmt::Display for Expression {
                     write!(f, "\n\t\t{} ", st)?;
                 }
                 writeln!(f, "")
-            },
+            }
             Expression::Array(vec) => {
                 write!(f, "Array Parameters: ")?;
                 for st in vec {
                     write!(f, "{:?} ", st)?;
                 }
                 writeln!(f, "")
-            },
+            }
             Expression::Index(ident, expr) => {
                 write!(f, "{}", *ident)?;
                 write!(f, "[{}]", *expr)
-            },
+            }
             Expression::Infix(inf, expr1, expr2) => {
                 write!(f, "\n\t\t\t{} {} {}", *expr1, inf, *expr2)
-            },
-            _ => {
-                write!(f, "{:?}", self)
             }
+            _ => write!(f, "{:?}", self),
         }
     }
 }
@@ -104,7 +101,7 @@ pub enum Infix {
     MoreThan,
     LessThanAndEqual,
     LessThan,
-    Assign
+    Assign,
 }
 
 impl fmt::Display for Infix {
