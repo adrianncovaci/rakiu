@@ -1,5 +1,4 @@
 use crate::lexer_mod::token::Token;
-use ndarray;
 use std::fmt;
 pub type Identifier = String;
 

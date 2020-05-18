@@ -227,6 +227,62 @@ fn eval_builtin(name: &str, args: Vec<Object>) -> Option<Object> {
 
             Some(Object::Array(vec))
         }
+        ("constant_division", [Object::Array(els), Object::Integer(_const)]) => {
+            let mut vec = vec![];
+            for row in els {
+                let mut row_arr = vec![];
+                for el in row {
+                    match el {
+                        Object::Integer(num) => row_arr.push(Object::Integer(*num / _const)),
+                        _ => continue,
+                    }
+                }
+                vec.push(row_arr);
+            }
+            Some(Object::Array(vec))
+        }
+        ("transpose_matrix", [Object::Array(els)]) => {
+            check_array_size(&els);
+            let mut vec = vec![];
+            for col in (0..els[0].len()) {
+                let mut arr = vec![];
+                for row in 0..els.len() {
+                    match els[row][col] {
+                        Object::Integer(num) => arr.push(Object::Integer(num)),
+                        _ => continue,
+                    }
+                }
+                vec.push(arr);
+            }
+            Some(Object::Array(vec))
+        }
+        ("add_matrix", [Object::Array(first_arr), Object::Array(second_arr)]) => {
+            if !check_array_size(&first_arr) || !check_array_size(&second_arr) {
+                panic!("Array's rows need to be the same size");
+            }
+
+            if (first_arr.len() != second_arr.len()) || (first_arr[0].len() != second_arr[0].len())
+            {
+                panic!("Arrays should be the same size");
+            }
+
+            let mut result = vec![];
+
+            for row in 0..first_arr.len() {
+                let mut arr = vec![];
+                for col in 0..first_arr[0].len() {
+                    match (&first_arr[row][col], &second_arr[row][col]) {
+                        (Object::Integer(num1), Object::Integer(num2)) => {
+                            arr.push(Object::Integer(num1 + num2))
+                        }
+                        _ => continue,
+                    }
+                }
+                result.push(arr);
+            }
+
+            Some(Object::Array(result))
+        }
         _ => panic!("Unrecognizable function"),
     }
 }
@@ -364,22 +420,45 @@ mod tests {
             "constant_product([{1, 2}], 10);",
             Object::Array([[Object::Integer(10), Object::Integer(20)].to_vec()].to_vec()),
         );
+        // eval(
+        //     "dot_product([{2, 4}], [{1, 2} {3, 4}]);",
+        //     Object::Array([[Object::Integer(58), Object::Integer(64)].to_vec()].to_vec()),
+        // );
         eval(
-            "dot_product([{3, -2, 5} {3, 0, 4}], [{2, 3} {-9, 0} {0, 4}]);",
+            "transpose_matrix([{1, 2, 3} {4, 5, 6}]);",
             Object::Array(
                 [
-                    [Object::Integer(24), Object::Integer(29)].to_vec(),
-                    [Object::Integer(6), Object::Integer(25)].to_vec(),
+                    [Object::Integer(1), Object::Integer(4)].to_vec(),
+                    [Object::Integer(2), Object::Integer(5)].to_vec(),
+                    [Object::Integer(3), Object::Integer(6)].to_vec(),
                 ]
                 .to_vec(),
             ),
         );
+        eval(
+            "add_matrix([{1, 2, 3, 4, 5} {1, 2, 3, 4, 5}], [{10, 10, 10, 10, 10} { 10, 10, 10, 10, 10 }]);",
+            Object::Array(
+                [
+                    [Object::Integer(11), Object::Integer(12), Object::Integer(13), Object::Integer(14), Object::Integer(15)].to_vec(),
+                    [Object::Integer(11), Object::Integer(12), Object::Integer(13), Object::Integer(14), Object::Integer(15)].to_vec(),
+                ].to_vec(),
+            )
+        );
     }
 
+    // print_array() // tot array-ul
+    // print_row(arr[0]) // 10 10
+    // print_col()
+
+    // let arr = [
+    //     {10, 10}
+    //     {11, 11}
+    // ]
+
     // inmultirea, impartirea cu o constanta,
-    // inmultirea, adunarea a 2 matrici
-    // transpose(arr)
+    // inmultirea, adunarea a 2 matrici, scaderea a 2-a matrici
     // inverse(arr)
+    // transpose(arr)
     // print(arr[0]) -> 1, 2, 3, 4, 5
     // arr[randuri][coloane]
     // print(arr)

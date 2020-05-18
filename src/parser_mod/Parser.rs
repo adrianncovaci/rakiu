@@ -2,7 +2,6 @@ use super::ParseItem;
 use crate::lexer_mod::lexer;
 use crate::lexer_mod::lexer::Lexer;
 use crate::lexer_mod::token::Token;
-use ndarray::Array2;
 
 use std::fmt;
 use std::mem;
