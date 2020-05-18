@@ -386,7 +386,6 @@ impl<'a> Parser<'a> {
                 // self.error_no_prefix();
                 return None;
             }
-            println!("{:?} {:?}", self.current_token, self.next_token);
         }
         self.next_token();
         Some(ParseItem::Expression::Array(arr))
