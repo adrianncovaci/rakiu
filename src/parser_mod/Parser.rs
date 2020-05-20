@@ -155,6 +155,9 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_statement(&mut self) -> Option<ParseItem::Statement> {
+        if *self.next_token == Token::Let {
+            self.next_token();
+        }
         match (*self.current_token) {
             Token::Return => self.parse_return_statement(),
             Token::Let => self.parse_let_statement(),
@@ -188,7 +191,6 @@ impl<'a> Parser<'a> {
                 return None;
             }
         };
-
         while !self.next_token_is(&Token::Semicolon) && order < self.peek_order() {
             match *self.next_token {
                 Token::Plus
@@ -233,7 +235,6 @@ impl<'a> Parser<'a> {
             self.next_token();
             return None;
         }
-
         left
     }
 
@@ -503,6 +504,7 @@ impl<'a> Parser<'a> {
             Some(expr) => expr,
             _ => return None,
         };
+        self.next_token();
 
         Some(ParseItem::Statement::Let(ident, eval))
     }
