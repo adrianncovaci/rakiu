@@ -5,7 +5,6 @@ use crate::evaluation_mod::codegen::generate_code;
 use lexer_mod::lexer::Lexer;
 use parser_mod::Parser::Parser;
 use std::io;
-use std::io::{BufRead, BufReader};
 
 fn main() {
     let mut input = String::new();

@@ -283,6 +283,47 @@ fn eval_builtin(name: &str, args: Vec<Object>) -> Option<Object> {
 
             Some(Object::Array(result))
         }
+        ("diff_matrix", [Object::Array(first_arr), Object::Array(second_arr)]) => {
+            if !check_array_size(first_arr) || !check_array_size(second_arr) {
+                panic!("Array's rows need to be the same size");
+            }
+            if (first_arr.len() != second_arr.len()) || (first_arr[0].len() != second_arr[0].len())
+            {
+                panic!("Arrays should to be the same size");
+            }
+
+            let mut result = vec![];
+
+            for row in 0..first_arr.len() {
+                let mut arr = vec![];
+                for col in 0..first_arr[0].len() {
+                    match (&first_arr[row][col], &second_arr[row][col]) {
+                        (Object::Integer(num1), Object::Integer(num2)) => {
+                            arr.push(Object::Integer(num1 - num2))
+                        }
+                        _ => (),
+                    }
+                }
+                result.push(arr);
+            }
+            Some(Object::Array(result))
+        }
+        ("print_array", [Object::Array(els)]) => {
+            let mut vec = vec![];
+            for row in els {
+                let mut row_arr = vec![];
+                for el in row {
+                    match el {
+                        Object::Integer(num) => row_arr.push(Object::Integer(*num)),
+                        _ => continue,
+                    }
+                }
+                vec.push(row_arr);
+                println!("{:?}", vec);
+            }
+
+            Some(Object::Array(vec))
+        }
         _ => panic!("Unrecognizable function"),
     }
 }
@@ -441,6 +482,15 @@ mod tests {
                 [
                     [Object::Integer(11), Object::Integer(12), Object::Integer(13), Object::Integer(14), Object::Integer(15)].to_vec(),
                     [Object::Integer(11), Object::Integer(12), Object::Integer(13), Object::Integer(14), Object::Integer(15)].to_vec(),
+                ].to_vec(),
+            )
+        );
+        eval(
+            "diff_matrix([{1, 2, 3, 4, 5} {1, 2, 3, 4, 5}], [{10, 10, 10, 10, 10} { 10, 10, 10, 10, 10 }]);",
+            Object::Array(
+                [
+                    [Object::Integer(-9), Object::Integer(-8), Object::Integer(-7), Object::Integer(-6), Object::Integer(-5)].to_vec(),
+                    [Object::Integer(-9), Object::Integer(-8), Object::Integer(-7), Object::Integer(-6), Object::Integer(-5)].to_vec(),
                 ].to_vec(),
             )
         );
