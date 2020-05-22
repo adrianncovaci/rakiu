@@ -138,8 +138,11 @@ impl<'a> Parser<'a> {
         let mut program: Program = vec![];
 
         while *self.current_token != Token::Eof {
+            println!("curr = {} next = {}", self.current_token, self.next_token);
             match self.parse_statement() {
-                Some(stmt) => program.push(stmt),
+                Some(stmt) => {
+                    program.push(stmt);
+                }
                 None => {}
             }
             self.next_token();
@@ -155,10 +158,15 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_statement(&mut self) -> Option<ParseItem::Statement> {
-        if *self.next_token == Token::Let {
+        if *self.next_token == Token::Let
+        // || *self.next_token == Token::Semicolon
+        {
             self.next_token();
         }
-        match (*self.current_token) {
+        if *self.current_token == Token::Semicolon || *self.current_token == Token::Eof {
+            return None;
+        }
+        match *self.current_token {
             Token::Return => self.parse_return_statement(),
             Token::Let => self.parse_let_statement(),
             Token::Illegal => Some(ParseItem::Statement::None),
@@ -212,7 +220,7 @@ impl<'a> Parser<'a> {
                 }
                 Token::Identifier(_) => {
                     self.next_token();
-                    self.error_no_prefix();
+                    // self.error_no_prefix();
                 }
                 Token::LeftBracket => {
                     self.next_token();
@@ -570,7 +578,7 @@ impl<'a> Parser<'a> {
             Some(args) => args,
             None => return None,
         };
-
+        self.next_token();
         Some(ParseItem::Expression::Call {
             func: Box::new(expr),
             args,

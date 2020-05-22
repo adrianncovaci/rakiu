@@ -26,9 +26,13 @@ fn eval_expr(expression: Expression, env: &mut Env) -> Object {
         }
         Expression::Integer(num) => Object::Integer(num),
         Expression::Bool(_bool) => Object::Boolean(_bool),
-        Expression::Identifier(name) => env
-            .get(&name.as_str())
-            .expect(format!("{} not found", name).as_str()),
+        Expression::Identifier(name) => {
+            let value = env
+                .get(&name.as_str())
+                .expect(format!("{} not found", name).as_str());
+            println!("{:?}", value);
+            value
+        }
         Expression::Function(ident, params, body) => Object::Function(ident, params, body),
         Expression::Call { func, args } => {
             let (params, body) = match *func {
@@ -308,7 +312,47 @@ fn eval_builtin(name: &str, args: Vec<Object>) -> Option<Object> {
             }
             Some(Object::Array(result))
         }
-        ("print_array", [Object::Array(els)]) => {
+        ("get_row", [Object::Integer(index), Object::Array(els)]) => {
+            if *index as usize > els.len() || *index <= 0 {
+                panic!("Invalid index");
+            }
+
+            let mut result = vec![];
+            let row = *index as usize;
+
+            for el in 0..els[row - 1].len() {
+                match els[row][el] {
+                    Object::Integer(int) => {
+                        result.push(Object::Integer(int));
+                    }
+                    _ => (),
+                }
+            }
+            Some(Object::Array(vec![result]))
+        }
+        ("get_col", [Object::Integer(index), Object::Array(els)]) => {
+            if !check_array_size(els) {
+                panic!("Array's rows need to be the same size");
+            }
+
+            if *index as usize > els[0].len() || *index <= 0 {
+                panic!("Invalid index");
+            }
+
+            let mut result = vec![];
+            let col = *index as usize - 1;
+
+            for el in 0..els.len() {
+                match els[el][col] {
+                    Object::Integer(int) => {
+                        result.push(Object::Integer(int));
+                    }
+                    _ => (),
+                }
+            }
+            Some(Object::Array(vec![result]))
+        }
+        ("print", [Object::Array(els)]) => {
             let mut vec = vec![];
             for row in els {
                 let mut row_arr = vec![];
@@ -323,6 +367,10 @@ fn eval_builtin(name: &str, args: Vec<Object>) -> Option<Object> {
             }
 
             Some(Object::Array(vec))
+        }
+        ("print", [Object::Integer(number)]) => {
+            println!("{}", number);
+            Some(Object::Integer(*number))
         }
         _ => panic!("Unrecognizable function"),
     }
@@ -348,7 +396,7 @@ fn eval_statement(statement: Statement, env: &mut Env) -> Object {
     }
 }
 
-fn eval_statements(stmnts: Vec<Statement>, env: &mut Env) -> Object {
+pub fn eval_statements(stmnts: Vec<Statement>, env: &mut Env) -> Object {
     let mut result = Object::Null;
 
     for stmnt in stmnts {
@@ -493,6 +541,24 @@ mod tests {
                     [Object::Integer(-9), Object::Integer(-8), Object::Integer(-7), Object::Integer(-6), Object::Integer(-5)].to_vec(),
                 ].to_vec(),
             )
+        );
+        eval(
+            "get_row(1, [{1, 2, 3, 4, 5} {1, 2, 3, 4, 5}])",
+            Object::Array(
+                [[
+                    Object::Integer(1),
+                    Object::Integer(2),
+                    Object::Integer(3),
+                    Object::Integer(4),
+                    Object::Integer(5),
+                ]
+                .to_vec()]
+                .to_vec(),
+            ),
+        );
+        eval(
+            "get_col(2, [{1, 2, 3, 4, 5} {1, 2, 3, 4, 5}])",
+            Object::Array([[Object::Integer(2), Object::Integer(2)].to_vec()].to_vec()),
         );
     }
 

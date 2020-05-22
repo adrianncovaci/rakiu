@@ -2,6 +2,8 @@ mod evaluation_mod;
 mod lexer_mod;
 mod parser_mod;
 use crate::evaluation_mod::codegen::generate_code;
+use crate::evaluation_mod::env::Env;
+use crate::evaluation_mod::evaluate::eval_statements;
 use lexer_mod::lexer::Lexer;
 use parser_mod::Parser::Parser;
 use std::io;
@@ -23,8 +25,10 @@ fn main() {
                 println!("{}", el);
             }
         }
-        unsafe {
-            generate_code(program);
-        }
+        let mut env = Env::new();
+        // unsafe {
+        //     generate_code(program);
+        // }
+        eval_statements(program, &mut env);
     }
 }
