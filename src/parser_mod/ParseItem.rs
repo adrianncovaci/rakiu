@@ -50,7 +50,7 @@ pub enum Expression {
     Function(Identifier, Vec<Identifier>, Vec<Statement>),
     Infix(Infix, Box<Expression>, Box<Expression>),
     Prefix(Prefix, Box<Expression>),
-    Index(Box<Expression>, Box<Expression>),
+    Index(Box<Expression>, Box<Expression>, Box<Option<Expression>>),
     If(Box<Expression>, Vec<Statement>, Option<Vec<Statement>>),
 }
 
@@ -76,9 +76,14 @@ impl fmt::Display for Expression {
                 }
                 writeln!(f, "")
             }
-            Expression::Index(ident, expr) => {
+            Expression::Index(ident, expr, index2) => {
                 write!(f, "{}", *ident)?;
-                write!(f, "[{}]", *expr)
+                // write!(f, "[{}]", *expr)
+                if *index2 != Box::new(None) {
+                    write!(f, "[{} {:?}]", *expr, *index2)
+                } else {
+                    write!(f, "[{}]", *expr)
+                }
             }
             Expression::Infix(inf, expr1, expr2) => {
                 write!(f, "\n\t\t\t{} {} {}", *expr1, inf, *expr2)

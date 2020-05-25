@@ -24,6 +24,53 @@ fn eval_expr(expression: Expression, env: &mut Env) -> Object {
             }
             Object::Array(els)
         }
+        Expression::Index(input_array, first_num, second_num) => {
+            let arr_name;
+            match eval_expr(*input_array, env) {
+                Object::String(name) => arr_name = name,
+                _ => panic!("Invalid identifier"),
+            }
+            let mut array = vec![];
+            match env.get(arr_name.as_str()) {
+                Some(Object::Array(els)) => {
+                    let mut row_arr = vec![];
+                    for row in els {
+                        for col in row {
+                            match col {
+                                Object::Integer(num) => row_arr.push(num),
+                                _ => continue,
+                            }
+                        }
+                    }
+                    array.push(row_arr);
+                }
+                _ => panic!("Unknown array"),
+            }
+
+            match *second_num {
+                Some(expr) => match (eval_expr(*first_num, env), eval_expr(expr, env)) {
+                    (Object::Integer(num1), Object::Integer(num2)) => {
+                        if num1 > array.len() as i64 {
+                            panic!("Array rows out of range");
+                        }
+                        if num2 > array[num1 as usize].len() as i64 {
+                            panic!("Array column out of range");
+                        }
+                        Object::Integer(array[num1 as usize][num2 as usize])
+                    }
+                    _ => panic!("Invalid index"),
+                },
+                None => match eval_expr(*first_num, env) {
+                    Object::Integer(num1) => {
+                        if num1 > array.len() as i64 {
+                            panic!("Array index out of range");
+                        }
+                        Object::Integer(array[0][num1 as usize])
+                    }
+                    _ => panic!("Invalid index"),
+                },
+            }
+        }
         Expression::Integer(num) => Object::Integer(num),
         Expression::Bool(_bool) => Object::Boolean(_bool),
         Expression::Identifier(name) => {
@@ -31,7 +78,7 @@ fn eval_expr(expression: Expression, env: &mut Env) -> Object {
                 .get(&name.as_str())
                 .expect(format!("{} not found", name).as_str());
             println!("{:?}", value);
-            value
+            Object::String(name)
         }
         Expression::Function(ident, params, body) => Object::Function(ident, params, body),
         Expression::Call { func, args } => {
@@ -40,7 +87,7 @@ fn eval_expr(expression: Expression, env: &mut Env) -> Object {
                     Some(Object::Function(_, args, body)) => (args, body),
                     _ => {
                         let elems = args.into_iter().map(|expr| eval_expr(expr, env)).collect();
-                        return eval_builtin(&name, elems).expect("Unrecognized function");
+                        return eval_builtin(&name, elems, env).expect("Unrecognized function");
                     }
                 },
                 _ => panic!("yo, what's that?"),
@@ -125,12 +172,104 @@ fn eval_expr(expression: Expression, env: &mut Env) -> Object {
                 _ => panic!("Can only compare integer literals"),
             }
         }
+        Expression::Infix(Infix::Assign, lhs, rhs) => {
+            let expr_lhs = lhs.clone();
+            let expr_rhs = rhs.clone();
+            match (*expr_lhs, eval_expr(*expr_rhs, env)) {
+                (Expression::Index(arr, first_index, second_index), Object::Integer(number)) => {
+                    let arr_copy = arr.clone();
+                    let arr_name;
+                    match eval_expr(*arr_copy, env) {
+                        Object::String(_name) => arr_name = _name,
+                        _ => panic!("Unrecognized Identifier"),
+                    }
+
+                    let first_index_clone = first_index.clone();
+                    let second_index_clone = second_index.clone();
+
+                    match eval_expr(Expression::Index(arr, first_index, second_index), env) {
+                        Object::Integer(num) => {
+                            let array_obj = env.get(arr_name.as_str());
+                            let row;
+                            let col;
+                            match *second_index_clone {
+                                Some(expr) => {
+                                    let obj = eval_expr(expr, env);
+                                    match obj {
+                                        Object::Integer(num) => {
+                                            row = num;
+                                        }
+                                        _ => panic!("Invalid Index"),
+                                    }
+                                }
+                                _ => row = 0,
+                            }
+                            match eval_expr(*first_index_clone, env) {
+                                Object::Integer(num) => {
+                                    col = num;
+                                }
+                                _ => panic!("Invalid Index"),
+                            }
+
+                            match array_obj {
+                                Some(Object::Array(els)) => {
+                                    let mut final_arr = vec![];
+                                    for i in 0..els.len() {
+                                        let mut row_arr = vec![];
+                                        for j in 0..els[i].len() {
+                                            if i == row as usize && j == col as usize {
+                                                row_arr.push(Object::Integer(number));
+                                                continue;
+                                            }
+                                            match els[i][j] {
+                                                Object::Integer(num) => {
+                                                    row_arr.push(Object::Integer(num));
+                                                }
+                                                _ => (),
+                                            }
+                                        }
+                                        final_arr.push(row_arr);
+                                    }
+                                    env.set(arr_name, Object::Array(final_arr));
+                                    return Object::Integer(0);
+                                }
+                                _ => {
+                                    panic!("Unexpected Identifier");
+                                }
+                            }
+                        }
+                        _ => panic!("Invalid Index"),
+                    }
+                }
+                _ => (),
+            }
+
+            let lhs_name;
+            match eval_expr(*lhs, env) {
+                Object::String(name) => lhs_name = name,
+                _ => panic!("Invalid assignment"),
+            }
+            match eval_expr(*rhs, env) {
+                Object::Integer(num2) => {
+                    env.set(lhs_name, Object::Integer(num2));
+                    Object::Integer(num2)
+                }
+                Object::Boolean(_bool) => {
+                    env.set(lhs_name, Object::Boolean(_bool));
+                    Object::Boolean(_bool)
+                }
+                Object::Array(els) => {
+                    env.set(lhs_name, Object::Array(els));
+                    Object::Integer(0)
+                }
+                _ => panic!("Invalid assignment"),
+            }
+        }
         _ => Object::Null,
     }
 }
 
-fn eval_builtin(name: &str, args: Vec<Object>) -> Option<Object> {
-    let mut env = Env::new();
+fn eval_builtin(name: &str, args: Vec<Object>, env: &mut Env) -> Option<Object> {
     match (name, args.as_slice()) {
         ("size", [Object::Array(els)]) => {
             let mut total = 0;
@@ -318,7 +457,7 @@ fn eval_builtin(name: &str, args: Vec<Object>) -> Option<Object> {
             }
 
             let mut result = vec![];
-            let row = *index as usize;
+            let row = *index as usize - 1;
 
             for el in 0..els[row - 1].len() {
                 match els[row][el] {
@@ -371,6 +510,15 @@ fn eval_builtin(name: &str, args: Vec<Object>) -> Option<Object> {
         ("print", [Object::Integer(number)]) => {
             println!("{}", number);
             Some(Object::Integer(*number))
+        }
+        ("print", [Object::String(name)]) => {
+            let obj = env.get(name.as_str());
+            println!("{:?} {:?}", name, obj);
+            match &obj {
+                Some(object) => println!("{:?}", *object),
+                None => panic!("Unrecognized Identifier"),
+            }
+            obj
         }
         _ => panic!("Unrecognizable function"),
     }
@@ -561,25 +709,7 @@ mod tests {
             Object::Array([[Object::Integer(2), Object::Integer(2)].to_vec()].to_vec()),
         );
     }
-
-    // print_array() // tot array-ul
-    // print_row(arr[0]) // 10 10
-    // print_col()
-
-    // let arr = [
-    //     {10, 10}
-    //     {11, 11}
-    // ]
-
-    // inmultirea, impartirea cu o constanta,
-    // inmultirea, adunarea a 2 matrici, scaderea a 2-a matrici
-    // inverse(arr)
-    // transpose(arr)
-    // print(arr[0]) -> 1, 2, 3, 4, 5
-    // arr[randuri][coloane]
-    // print(arr)
-    // #[test]
-    // fn test_functions() {
-    //     eval("fn sum(a, b) { return a + b; } sum(100, 200);", Object::Integer(300));
-    // }
 }
+
+// transpose randuri print
+// index, returnam si sa schimbam

@@ -310,6 +310,26 @@ impl<'a> Parser<'a> {
             None => return None,
         };
 
+        // self.next_token();
+
+        let index2;
+        if *self.next_token != Token::RightBracket {
+            if *self.next_token != Token::Comma {
+                self.error_no_prefix();
+                return None;
+            }
+            self.next_token();
+            self.next_token();
+            println!("{}", *self.current_token);
+            match self.parse_expression(Order::Lowest) {
+                Some(expr) => {
+                    index2 = Some(expr);
+                }
+                None => return None,
+            };
+        } else {
+            index2 = None;
+        }
         if !self.expect_next_token(Token::RightBracket) {
             return None;
         }
@@ -317,6 +337,7 @@ impl<'a> Parser<'a> {
         Some(ParseItem::Expression::Index(
             Box::new(left),
             Box::new(index),
+            Box::new(index2),
         ))
     }
 
