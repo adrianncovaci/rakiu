@@ -18,7 +18,7 @@ fn main() {
         let mut parser = Parser::new(lexer);
         let program = parser.parse();
         let errs = parser.get_errors();
-        println!("{}", &program[program.len() - 1]);
+        // println!("{}", &program[program.len() - 1]);
 
         if errs.len() > 0 {
             for el in &errs {

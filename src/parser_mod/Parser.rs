@@ -138,7 +138,6 @@ impl<'a> Parser<'a> {
         let mut program: Program = vec![];
 
         while *self.current_token != Token::Eof {
-            println!("curr = {} next = {}", self.current_token, self.next_token);
             match self.parse_statement() {
                 Some(stmt) => {
                     program.push(stmt);
@@ -320,7 +319,6 @@ impl<'a> Parser<'a> {
             }
             self.next_token();
             self.next_token();
-            println!("{}", *self.current_token);
             match self.parse_expression(Order::Lowest) {
                 Some(expr) => {
                     index2 = Some(expr);

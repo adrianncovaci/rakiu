@@ -2,6 +2,7 @@ use crate::evaluation_mod::env::Env;
 use crate::lexer_mod::lexer::Lexer;
 use crate::parser_mod::ParseItem::{Expression, Infix, Prefix, Statement};
 use crate::parser_mod::Parser::Parser;
+use std::io::{self, Write};
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum Object {
@@ -77,7 +78,6 @@ fn eval_expr(expression: Expression, env: &mut Env) -> Object {
             let value = env
                 .get(&name.as_str())
                 .expect(format!("{} not found", name).as_str());
-            println!("{:?}", value);
             Object::String(name)
         }
         Expression::Function(ident, params, body) => Object::Function(ident, params, body),
@@ -87,7 +87,8 @@ fn eval_expr(expression: Expression, env: &mut Env) -> Object {
                     Some(Object::Function(_, args, body)) => (args, body),
                     _ => {
                         let elems = args.into_iter().map(|expr| eval_expr(expr, env)).collect();
-                        return eval_builtin(&name, elems, env).expect("Unrecognized function");
+                        return eval_builtin(&name, elems, env)
+                            .expect(format!("Unrecognized function {:#?}", name).as_str());
                     }
                 },
                 _ => panic!("yo, what's that?"),
@@ -271,6 +272,46 @@ fn eval_expr(expression: Expression, env: &mut Env) -> Object {
 
 fn eval_builtin(name: &str, args: Vec<Object>, env: &mut Env) -> Option<Object> {
     match (name, args.as_slice()) {
+        ("print", [Object::Array(els)]) => {
+            print!("{}[2J", 27 as char); //clear terminal screen
+            let mut vec = vec![];
+            for row in els {
+                let mut row_arr = vec![];
+                for el in row {
+                    match el {
+                        Object::Integer(num) => row_arr.push(Object::Integer(*num)),
+                        _ => continue,
+                    }
+                }
+                vec.push(row_arr);
+                println!("{:?}", vec);
+            }
+
+            return Some(Object::Array(vec));
+        }
+        ("print", [Object::Integer(number)]) => {
+            print!("{}[2J", 27 as char);
+            println!("{}", number);
+            return Some(Object::Integer(*number));
+        }
+        ("print", [Object::String(name)]) => {
+            print!("{}[2J", 27 as char);
+            let obj = env.get(name.as_str());
+            match &obj {
+                Some(object) => println!("{:?}", *object),
+                None => panic!("Unrecognized Identifier"),
+            }
+            return obj;
+        }
+        _ => (),
+    }
+    let mut params: Vec<Object> = vec![];
+    for arg in &args {
+        if let Object::String(val) = arg {
+            params.push(env.get(val).unwrap());
+        }
+    }
+    match (name, params.as_slice()) {
         ("size", [Object::Array(els)]) => {
             let mut total = 0;
             for row in els {
@@ -284,7 +325,7 @@ fn eval_builtin(name: &str, args: Vec<Object>, env: &mut Env) -> Option<Object> 
                 for el in row {
                     match el {
                         Object::Integer(num) => {
-                            if (*num > max) {
+                            if *num > max {
                                 max = *num;
                             }
                         }
@@ -480,7 +521,6 @@ fn eval_builtin(name: &str, args: Vec<Object>, env: &mut Env) -> Option<Object> 
 
             let mut result = vec![];
             let col = *index as usize - 1;
-
             for el in 0..els.len() {
                 match els[el][col] {
                     Object::Integer(int) => {
@@ -491,36 +531,10 @@ fn eval_builtin(name: &str, args: Vec<Object>, env: &mut Env) -> Option<Object> 
             }
             Some(Object::Array(vec![result]))
         }
-        ("print", [Object::Array(els)]) => {
-            let mut vec = vec![];
-            for row in els {
-                let mut row_arr = vec![];
-                for el in row {
-                    match el {
-                        Object::Integer(num) => row_arr.push(Object::Integer(*num)),
-                        _ => continue,
-                    }
-                }
-                vec.push(row_arr);
-                println!("{:?}", vec);
-            }
-
-            Some(Object::Array(vec))
+        _ => {
+            //    panic!(format!("Unrecognizable function {:?}", name).as_str()),
+            None
         }
-        ("print", [Object::Integer(number)]) => {
-            println!("{}", number);
-            Some(Object::Integer(*number))
-        }
-        ("print", [Object::String(name)]) => {
-            let obj = env.get(name.as_str());
-            println!("{:?} {:?}", name, obj);
-            match &obj {
-                Some(object) => println!("{:?}", *object),
-                None => panic!("Unrecognized Identifier"),
-            }
-            obj
-        }
-        _ => panic!("Unrecognizable function"),
     }
 }
 fn check_array_size(arr: &Vec<Vec<Object>>) -> bool {
